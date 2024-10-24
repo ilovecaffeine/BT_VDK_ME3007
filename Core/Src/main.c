@@ -18,7 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <string.h>
+#include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -31,6 +32,31 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//LCD -------------------------------------------------------------
+#define LCD_NIB 4
+#define LCD_DATA_REG         GPIO_PIN_SET
+#define LCD_COMMAND_REG      GPIO_PIN_RESET
+GPIO_TypeDef* ports[] = {D4_GPIO_Port, D5_GPIO_Port, D6_GPIO_Port, D7_GPIO_Port};
+uint16_t pins[] = {D4_Pin, D5_Pin, D6_Pin, D7_Pin};
+
+//KEYPAD -------------------------------------------------------------
+GPIO_TypeDef* rowPorts[4] = {KeyA_GPIO_Port, KeyB_GPIO_Port, KeyC_GPIO_Port, KeyD_GPIO_Port};
+uint16_t rowPins[4] = {KeyA_Pin, KeyB_Pin, KeyC_Pin, KeyD_Pin};
+
+GPIO_TypeDef* colPorts[4] = {Key1_GPIO_Port, Key2_GPIO_Port, Key3_GPIO_Port, Key4_GPIO_Port};
+uint16_t colPins[4] = {Key1_Pin, Key2_Pin, Key3_Pin, Key4_Pin};
+// Keypad layout
+char keys[4][4] = {
+  {'7', '8', '9', '/'},
+  {'4', '5', '6', '*'},
+  {'1', '2', '3', '-'},
+  {'C', '0', '=', '+'}
+};
+
+int NORMAL_STATE = 1;
+ int PRESSED_STATE = 0;
+ int index_led = 0;
+ int buttonPressed = 0;
 
 /* USER CODE END PD */
 
@@ -92,215 +118,178 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-
-
-
-  int hundreds = 0, tens = 0, ones = 0;
-  int led_buffer[3] = {0, 0, 0};
-  void updateBuffer()
+  void lcd_write( uint8_t data)
   {
-      led_buffer[0] = ones;
-      led_buffer[1] = tens;
-      led_buffer[2] = hundreds;
+  	for(uint8_t i = 0; i < 4; i++)
+  	{
+  		if( ((data >> i) & 0x01) == 0)
+  	   	HAL_GPIO_WritePin(ports[i], pins[i], GPIO_PIN_RESET);
+  		else
+  			HAL_GPIO_WritePin(ports[i], pins[i], GPIO_PIN_SET);
+  	}
 
+  	HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_SET);
+  	HAL_Delay(1);
+  	HAL_GPIO_WritePin(EN_GPIO_Port, EN_Pin, GPIO_PIN_RESET); 		// Data receive on falling edge
   }
 
-    void off_all_SEG(void) {
-        HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_SET);
-    }
-    void display7SEG(int num) {
-      if (num < 0 || num > 9) return; // Ensure the number is between 0 and 9
-      switch (num) {
+  void lcd_write_data( uint8_t data)
+  {
+  	  HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, LCD_DATA_REG);			// Write to data register
+
+  	  lcd_write(data >> 4);
+  		lcd_write(data & 0x0F);
+  }
+
+
+
+  void lcd_write_command(uint8_t command)
+  {
+  	HAL_GPIO_WritePin(RS_GPIO_Port, RS_Pin, LCD_COMMAND_REG);		// Write to command register
+
+  		lcd_write((command >> 4));
+  		lcd_write(command & 0x0F);
+  }
+
+  void Lcd_init(void) {
+      HAL_Delay(50);    // Wait for LCD to power up
+
+      lcd_write_command(0x33);
+      HAL_Delay(5);
+      lcd_write_command(0x32);// Initialize in 4-bit mode
+
+      lcd_write_command(0x02); // Home
+      HAL_Delay(5);
+
+      lcd_write_command(0x28);  // 4-bit mode, 2 lines, 5x8 font
+      HAL_Delay(5);
+
+      lcd_write_command(0x0C);  // Display ON, cursor OFF, blink OFF
+      HAL_Delay(5);
+
+      lcd_write_command(0x06);  // Auto-increment cursor
+      HAL_Delay(5);
+
+      lcd_write_command(0x01);  // Clear display
+      HAL_Delay(5);
+  }
+
+
+  void Lcd_clear_display(void)
+  {
+  	lcd_write_command(0x01);
+  	HAL_Delay(2);
+  }
+  void Lcd_home() {
+      lcd_write_command(0x02);  // Gửi lệnh "Return Home"
+      HAL_Delay(2);
+  }
+  void Lcd_cursor_on(void) {
+      lcd_write_command(0x0E);  // Display ON, cursor ON
+      HAL_Delay(2);
+  }
+
+  void Lcd_cursor_off(void) {
+      lcd_write_command(0x0C);  // Display ON, cursor OFF
+      HAL_Delay(2);
+  }
+
+
+  void Lcd_write_string(char * string)
+  {
+  	for(uint8_t i = 0; i < strlen(string); i++)
+  	{
+  		lcd_write_data( string[i]);
+  	}
+  }
+
+  void Lcd_write_int(int number)
+  {
+  	char buffer[11];
+  	sprintf(buffer, "%d", number);
+  	Lcd_write_string(buffer);
+  }
+
+  void Lcd_gotoxy(uint8_t x, uint8_t y) {
+      uint8_t address;
+
+      // Kiểm tra y để xác định dòng
+      switch(y) {
           case 0:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_SET);
+              address = 0x00 + x;  // �?ịa chỉ của dòng 1 bắt đầu từ 0x00
               break;
           case 1:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_SET);
-              break;
-          case 2:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 3:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 4:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 5:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 6:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 7:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_SET);
-              break;
-          case 8:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
-              break;
-          case 9:
-              HAL_GPIO_WritePin(GPIOB, SEG_0_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_1_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_2_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_3_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_4_Pin, GPIO_PIN_SET);
-              HAL_GPIO_WritePin(GPIOB, SEG_5_Pin, GPIO_PIN_RESET);
-              HAL_GPIO_WritePin(GPIOB, SEG_6_Pin, GPIO_PIN_RESET);
+              address = 0x40 + x;  // �?ịa chỉ của dòng 2 bắt đầu từ 0x40
               break;
           default:
-              // Handle invalid input
-              break;
+              return;  // Nếu y không hợp lệ (khác 0 hoặc 1), thoát hàm
       }
-    }
-   void turnonlyLED(int index) {
-        // Turn off all LEDs first
-        HAL_GPIO_WritePin(GPIOA, EN0_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOA, EN1_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOA, EN2_Pin, GPIO_PIN_SET);
+
+      // Gửi lệnh "Set DDRAM Address" với lệnh gốc 0x80
+      lcd_write_command(0x80 | address);
+  }
+  void Lcd_clear_xy(uint8_t x,uint8_t y)
+  {
+  	Lcd_gotoxy( x,y);
+  	lcd_write_data(' ');
+  }
 
 
-        // Turn on the specified LED based on the index
-        switch (index) {
-            case 0:
-                HAL_GPIO_WritePin(GPIOA, EN0_Pin, GPIO_PIN_RESET);
-                break;
-            case 1:
-                HAL_GPIO_WritePin(GPIOA, EN1_Pin, GPIO_PIN_RESET);
-                break;
-            case 2:
-                HAL_GPIO_WritePin(GPIOA, EN2_Pin, GPIO_PIN_RESET);
-                break;
-            default:
-                // Handle invalid index
-                break;
-        }
-    }
+  char keypad_scan(void) {
+      // Loop through each row
+      for (int row = 0; row < 4; row++) {
+          // Set the current row LOW and the others HIGH
+          HAL_GPIO_WritePin(rowPorts[row], rowPins[row], GPIO_PIN_RESET);
+
+          // Set other rows to HIGH
+          for (int otherRow = 0; otherRow < 4; otherRow++) {
+              if (otherRow != row) {
+                  HAL_GPIO_WritePin(rowPorts[otherRow], rowPins[otherRow], GPIO_PIN_SET);
+              }
+          }
 
 
-    void update7SEG(int index) {
-        switch (index) {
-            case 0:
-                // Display the first 7SEG with led_buffer[0] ones
-                display7SEG(led_buffer[0]);
-                turnonlyLED(0);
-                break;
-            case 1:
-                // Display the second 7SEG with led_buffer[1] tens
-                display7SEG(led_buffer[1]);
-                turnonlyLED(1);
-                break;
-            case 2:
-                // Display the third 7SEG with led_buffer[2] hundreds
-                display7SEG(led_buffer[2]);
-                turnonlyLED(2);
-                break;
-            default:
-                break;
-        }
-    }
 
-    int NORMAL_STATE = 1;
-    int PRESSED_STATE = 0;
-    int index_led = 0;
-    int buttonPressed = 0;
+          // Check each column
+          for (int col = 0; col < 4; col++) {
+              // Check if the key is pressed
+              if (HAL_GPIO_ReadPin(colPorts[col], colPins[col]) == GPIO_PIN_RESET) {
+            	  return keys[row][col];
+
+              }
+          }
+
+          // Set the current row back to HIGH
+          HAL_GPIO_WritePin(rowPorts[row], rowPins[row], GPIO_PIN_SET);
+      }
+      return '\0';
+  }
 
 
+
+
+
+    Lcd_init();
+    char lastKey = '\0'; // Variable to hold the last displayed key
     while (1)
     {
-        int buttonreg = HAL_GPIO_ReadPin(GPIOA, Button_1_Pin);
-        if (buttonreg == PRESSED_STATE)
-        {
-            if (buttonPressed == 0)
-            {
-                ones++;
-                buttonPressed = 1;
-            }
-        }
-        else if (buttonreg == NORMAL_STATE)
-        {
-            buttonPressed = 0;
+        char key = keypad_scan(); // Scan for key press
+
+        if (key == 'C') {
+            Lcd_clear_display(); // Clear the LCD display if 'C' is pressed
+            lastKey = '\0'; // Reset lastKey to allow new input
+        } else if (key != '\0' && key != lastKey) { // If a new key was pressed
+            char keyStr[2];  // Array to hold the key and null terminator
+            keyStr[0] = key;  // Assign the key to the first element
+            keyStr[1] = '\0';  // Null-terminate the string
+
+            Lcd_write_string(keyStr);  // Display the key on the LCD
+
+            lastKey = key; // Update lastKey to the current key
+        } else if (key == '\0') {
+            lastKey = '\0'; // Reset lastKey when no key is pressed
         }
 
-
-      if (ones >= 10)
-      {
-        ones = 0;
-        tens++;
-      }
-      if (tens >= 10)
-      {
-        tens = 0;
-        hundreds++;
-      }
-      if (hundreds >= 10)
-      {
-        hundreds = 0;
-      }
-      updateBuffer();
-      update7SEG(index_led);
-      index_led = (index_led + 1) % 3;
-        HAL_Delay(200);
 
     /* USER CODE END WHILE */
 
@@ -362,32 +351,32 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, EN0_Pin|EN1_Pin|EN2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, D4_Pin|D5_Pin|D6_Pin|D7_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, SEG_0_Pin|SEG_1_Pin|SEG_2_Pin|SEG_3_Pin
-                          |SEG_4_Pin|SEG_5_Pin|SEG_6_Pin|GPIO_PIN_8, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, KeyD_Pin|RS_Pin|EN_Pin|KeyA_Pin
+                          |KeyB_Pin|KeyC_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : EN0_Pin EN1_Pin EN2_Pin */
-  GPIO_InitStruct.Pin = EN0_Pin|EN1_Pin|EN2_Pin;
+  /*Configure GPIO pins : D4_Pin D5_Pin D6_Pin D7_Pin */
+  GPIO_InitStruct.Pin = D4_Pin|D5_Pin|D6_Pin|D7_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Button_1_Pin */
-  GPIO_InitStruct.Pin = Button_1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(Button_1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : SEG_0_Pin SEG_1_Pin SEG_2_Pin SEG_3_Pin
-                           SEG_4_Pin SEG_5_Pin SEG_6_Pin PB8 */
-  GPIO_InitStruct.Pin = SEG_0_Pin|SEG_1_Pin|SEG_2_Pin|SEG_3_Pin
-                          |SEG_4_Pin|SEG_5_Pin|SEG_6_Pin|GPIO_PIN_8;
+  /*Configure GPIO pins : KeyD_Pin RS_Pin EN_Pin KeyA_Pin
+                           KeyB_Pin KeyC_Pin */
+  GPIO_InitStruct.Pin = KeyD_Pin|RS_Pin|EN_Pin|KeyA_Pin
+                          |KeyB_Pin|KeyC_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Key1_Pin Key2_Pin Key3_Pin Key4_Pin */
+  GPIO_InitStruct.Pin = Key1_Pin|Key2_Pin|Key3_Pin|Key4_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
