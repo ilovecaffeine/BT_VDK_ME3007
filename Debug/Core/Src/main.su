@@ -1,0 +1,8 @@
+../Core/Src/main.c:101:8:updateBuffer	16	static
+../Core/Src/main.c:64:5:main	56	static
+../Core/Src/main.c:118:10:display7SEG	16	static
+../Core/Src/main.c:216:9:turnonlyLED	16	static
+../Core/Src/main.c:241:10:update7SEG	24	static
+../Core/Src/main.c:316:6:SystemClock_Config	72	static
+../Core/Src/main.c:353:13:MX_GPIO_Init	40	static
+../Core/Src/main.c:405:6:Error_Handler	4	static,ignoring_inline_asm
