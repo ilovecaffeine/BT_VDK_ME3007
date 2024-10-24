@@ -67,7 +67,7 @@ main-build: BTvdk.elf secondary-outputs
 
 # Tool invocations
 BTvdk.elf BTvdk.map: $(OBJS) $(USER_OBJS) C:\Users\admin\Documents\ST32\ Workspace\BTvdk\STM32F103C6TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "BTvdk.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\admin\Documents\ST32 Workspace\BTvdk\STM32F103C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="BTvdk.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "BTvdk.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\admin\Documents\ST32 Workspace\BTvdk\STM32F103C6TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="BTvdk.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -u _scanf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
