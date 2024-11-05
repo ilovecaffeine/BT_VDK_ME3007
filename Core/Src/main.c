@@ -102,15 +102,17 @@ int main(void)
 //HAL_UART_Transmit(&huart1, pData, Size, Timeout);
 //HAL_UART_Receive(&huart1, pData, Size, Timeout);
 
+  char buffer[30];
     while (1)
     {
-    	char *nhan[10];
-        char *pData = "Hello, STM32!\r\n";  // Data to be transmitted
-        uint16_t size = strlen(pData);      // Size of the data
-        HAL_UART_Transmit(&huart1, (uint8_t*)pData, size, HAL_MAX_DELAY); // Transmit data
-        HAL_Delay(1000);
-        HAL_UART_Receive(&huart1, (uint8_t*)nhan, 10, HAL_MAX_DELAY);
-        HAL_Delay(1000);
+    		   strcpy(buffer,"Hello\r\n");
+    		   HAL_UART_Transmit(&huart1, (uint8_t*)buffer,  strlen(buffer), HAL_MAX_DELAY);
+    		   HAL_Delay(500);
+
+
+
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
