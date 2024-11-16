@@ -1,5 +1,8 @@
-../Core/Src/main.c:66:5:main	1
-../Core/Src/main.c:124:6:SystemClock_Config	3
-../Core/Src/main.c:161:13:MX_I2C1_Init	2
-../Core/Src/main.c:195:13:MX_GPIO_Init	1
-../Core/Src/main.c:217:6:Error_Handler	1
+../Core/Src/main.c:75:6:MAX7219_Send	1
+../Core/Src/main.c:84:6:MAX7219_Init	1
+../Core/Src/main.c:92:6:MAX7219_SetDigit	2
+../Core/Src/main.c:105:5:main	2
+../Core/Src/main.c:165:6:SystemClock_Config	3
+../Core/Src/main.c:202:13:MX_SPI1_Init	2
+../Core/Src/main.c:239:13:MX_GPIO_Init	1
+../Core/Src/main.c:271:6:Error_Handler	1
