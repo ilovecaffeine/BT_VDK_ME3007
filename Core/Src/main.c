@@ -58,9 +58,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     // Kiểm tra nếu ngắt xảy ra trên chân PB7 (Button_1)
     if (GPIO_Pin == GPIO_PIN_0) {
         // Toggle đèn LED
-//         if (HAL_GPIO_ReadPin(GPIOA, Button_1_Pin) == GPIO_PIN_SET) {
+         if (HAL_GPIO_ReadPin(GPIOA, Button_1_Pin) == GPIO_PIN_SET) {
         HAL_GPIO_TogglePin(Led_1_GPIO_Port, Led_1_Pin);
-         //}
+         }
     }
 }
 /* USER CODE END 0 */
@@ -181,7 +181,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : Button_1_Pin */
   GPIO_InitStruct.Pin = Button_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(Button_1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Led_1_Pin */
