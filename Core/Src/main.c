@@ -60,9 +60,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
     if (GPIO_Pin == GPIO_PIN_0) {
         // Toggle đèn LED
-         if (HAL_GPIO_ReadPin(GPIOA, Button_1_Pin) == GPIO_PIN_SET) {
+//         if (HAL_GPIO_ReadPin(Button_1_GPIO_Port, Button_1_Pin) == GPIO_PIN_RESET) {
         HAL_GPIO_TogglePin(Led_1_GPIO_Port, Led_1_Pin);
-         }
+         //}
     }
 }
 /* USER CODE END 0 */
@@ -239,8 +239,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : Button_1_Pin */
   GPIO_InitStruct.Pin = Button_1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(Button_1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Led_1_Pin */
@@ -249,6 +249,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Led_1_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
