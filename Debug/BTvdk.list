@@ -37,11 +37,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_macro  00017b1c  00000000  00000000  00014416  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0000b14e  00000000  00000000  0002bf32  2**0
+ 17 .debug_line   0000b14c  00000000  00000000  0002bf32  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    0008777d  00000000  00000000  00037080  2**0
+ 18 .debug_str    0008777d  00000000  00000000  0003707e  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  000be7fd  2**0
+ 19 .comment      00000043  00000000  00000000  000be7fb  2**0
                   CONTENTS, READONLY
  20 .debug_frame  00003f24  00000000  00000000  000be840  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -1008,12 +1008,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  8000be0:	2b01      	cmp	r3, #1
  8000be2:	d10a      	bne.n	8000bfa <HAL_GPIO_EXTI_Callback+0x26>
         // Toggle đèn LED
-         if (HAL_GPIO_ReadPin(GPIOA, Button_1_Pin) == GPIO_PIN_SET) {
+         if (HAL_GPIO_ReadPin(Button_1_GPIO_Port, Button_1_Pin) == GPIO_PIN_RESET) {
  8000be4:	2101      	movs	r1, #1
  8000be6:	4807      	ldr	r0, [pc, #28]	@ (8000c04 <HAL_GPIO_EXTI_Callback+0x30>)
  8000be8:	f000 fe56 	bl	8001898 <HAL_GPIO_ReadPin>
  8000bec:	4603      	mov	r3, r0
- 8000bee:	2b01      	cmp	r3, #1
+ 8000bee:	2b00      	cmp	r3, #0
  8000bf0:	d103      	bne.n	8000bfa <HAL_GPIO_EXTI_Callback+0x26>
         HAL_GPIO_TogglePin(Led_1_GPIO_Port, Led_1_Pin);
  8000bf2:	2101      	movs	r1, #1
@@ -1076,9 +1076,6 @@ int main(void)
  8000c28:	f000 f930 	bl	8000e8c <setTimer1>
     while (1)
     {
-
-//    		   HAL_Delay(500);
-
         if(timer1_flag == 1){
  8000c2c:	4b07      	ldr	r3, [pc, #28]	@ (8000c4c <main+0x40>)
  8000c2e:	681b      	ldr	r3, [r3, #0]
@@ -1087,7 +1084,7 @@ int main(void)
          setTimer1(250);
  8000c34:	20fa      	movs	r0, #250	@ 0xfa
  8000c36:	f000 f929 	bl	8000e8c <setTimer1>
-HAL_GPIO_TogglePin(Led_2_GPIO_Port, Led_2_Pin);
+         HAL_GPIO_TogglePin(Led_2_GPIO_Port, Led_2_Pin);
  8000c3a:	f44f 5100 	mov.w	r1, #8192	@ 0x2000
  8000c3e:	4804      	ldr	r0, [pc, #16]	@ (8000c50 <main+0x44>)
  8000c40:	f000 fe59 	bl	80018f6 <HAL_GPIO_TogglePin>
@@ -1400,11 +1397,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = Button_1_Pin;
  8000e0c:	2301      	movs	r3, #1
  8000e0e:	613b      	str	r3, [r7, #16]
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
  8000e10:	4b14      	ldr	r3, [pc, #80]	@ (8000e64 <MX_GPIO_Init+0x100>)
  8000e12:	617b      	str	r3, [r7, #20]
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
- 8000e14:	2300      	movs	r3, #0
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+ 8000e14:	2301      	movs	r3, #1
  8000e16:	61bb      	str	r3, [r7, #24]
   HAL_GPIO_Init(Button_1_GPIO_Port, &GPIO_InitStruct);
  8000e18:	f107 0310 	add.w	r3, r7, #16
@@ -1451,7 +1448,7 @@ static void MX_GPIO_Init(void)
  8000e58:	40021000 	.word	0x40021000
  8000e5c:	40011000 	.word	0x40011000
  8000e60:	40010c00 	.word	0x40010c00
- 8000e64:	10110000 	.word	0x10110000
+ 8000e64:	10210000 	.word	0x10210000
  8000e68:	40010800 	.word	0x40010800
 
 08000e6c <HAL_TIM_PeriodElapsedCallback>:
